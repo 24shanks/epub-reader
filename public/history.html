@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阅读历史</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: #f5f5f5;
+            min-height: 100vh;
+        }
+        #header { max-width: 900px; margin: 0 auto; padding: 15px; }
+        #book-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 15px 15px;
+        }
+        .history-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        .history-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .history-cover {
+            width: 60px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
+            background-color: #e0e0e0;
+            border: 1px solid #ddd;
+            margin-right: 15px;
+        }
+        .history-info {
+            flex: 1;
+        }
+        .history-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .history-progress {
+            font-size: 13px;
+            color: #666;
+        }
+        .history-date {
+            font-size: 12px;
+            color: #999;
+        }
+        .history-link {
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            width: 100%;
+        }
+        .history-link:hover .history-item {
+            background: #f8f9fa;
+        }
+        .empty-message {
+            text-align: center;
+            color: #777;
+            padding: 60px 20px;
+            font-size: 14px;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .pagination button {
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .pagination button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .page-info {
+            font-size: 13px;
+            color: #555;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 15px;
+            color: #007bff;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div id="header"></div>
+    <div id="book-container">
+        <a href="/index.html" class="back-link">← 返回书架</a>
+        <ul class="history-list" id="history-list">
+            <li class="empty-message">正在加载...</li>
+        </ul>
+        <div class="pagination" id="pagination-controls" style="display: none;">
+            <button id="btn-prev" onclick="prevPage()">上一页</button>
+            <span class="page-info" id="page-info"></span>
+            <button id="btn-next" onclick="nextPage()">下一页</button>
+        </div>
+    </div>
+
+    <script src="header.js"></script>
+    <script>
+        function renderPage() {
+            const listElement = document.getElementById('history-list');
+
+            if (window.historyData && window.historyData.length > 0) {
+                listElement.innerHTML = '';
+                window.historyData.forEach(item => {
+                    const li = document.createElement('li');
+                    const progress = item.total_chapters > 0
+                        ? `第 ${item.current_page} / ${item.total_chapters} 章`
+                        : `第 ${item.current_page} 章`;
+                    const updatedDate = new Date(item.updated_at).toLocaleString('zh-CN');
+                    li.innerHTML = `
+                        <a href="/reader.html?book=${encodeURIComponent(item.file_path)}" class="history-link">
+                            <img class="history-cover" src="${item.cover_path || '/js/placeholder.png'}" alt="${item.title}">
+                            <div class="history-info">
+                                <div class="history-title">${item.title}</div>
+                                <div class="history-progress">${progress}</div>
+                                <div class="history-date">上次阅读: ${updatedDate}</div>
+                            </div>
+                        </a>
+                    `;
+                    listElement.appendChild(li);
+                });
+            } else {
+                listElement.innerHTML = '<li class="empty-message">暂无阅读历史</li>';
+            }
+        }
+
+        function updatePaginationControls() {
+            const paginationContainer = document.getElementById('pagination-controls');
+            const pageInfo = document.getElementById('page-info');
+            const btnPrev = document.getElementById('btn-prev');
+            const btnNext = document.getElementById('btn-next');
+
+            if (totalPages >= 1) {
+                paginationContainer.style.display = 'flex';
+                pageInfo.innerText = `第 ${currentPage} / ${totalPages} 页`;
+                btnPrev.disabled = currentPage <= 1;
+                btnNext.disabled = currentPage >= totalPages;
+            } else {
+                paginationContainer.style.display = 'none';
+            }
+        }
+
+        async function fetchHistory(page = 1) {
+            const user = getCurrentUser();
+            if (!user) {
+                alert('请先登录');
+                location.href = '/login.html';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/reading-history/${user.id}?page=${page}&pageSize=10`);
+                const result = await response.json();
+
+                if (result.data && Array.isArray(result.data)) {
+                    window.historyData = result.data;
+                    currentPage = result.pagination.page;
+                    totalPages = result.pagination.totalPages;
+                    renderPage();
+                    updatePaginationControls();
+                } else {
+                    document.getElementById('history-list').innerHTML = '<li class="empty-message">加载失败</li>';
+                }
+            } catch (err) {
+                console.error('加载阅读历史失败:', err);
+                document.getElementById('history-list').innerHTML = '<li class="empty-message">加载失败，请检查服务器</li>';
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                fetchHistory(currentPage - 1);
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                fetchHistory(currentPage + 1);
+            }
+        }
+
+        window.onload = async () => {
+            const user = getCurrentUser();
+            if (!user) {
+                alert('请先登录');
+                location.href = '/login.html';
+                return;
+            }
+            await initHeader();
+            fetchHistory(1);
+        };
+    </script>
+</body>
+</html>

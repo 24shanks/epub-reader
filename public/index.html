@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>布吉阅读室</title>
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        #warning-banner {
+            display: none;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        #warning-banner button {
+            margin-left: 15px;
+            padding: 6px 16px;
+            background: #ffc107;
+            color: #333;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        #warning-banner button:hover {
+            background: #e0a800;
+        }
+
+        #book-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+
+        .book-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+        }
+
+        .book-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            background-color: #fff;
+        }
+
+        .book-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .book-item:active {
+            transform: scale(0.98);
+        }
+
+        .book-cover {
+            width: 100%;
+            aspect-ratio: 3/4;
+            object-fit: cover;
+            border-radius: 4px;
+            background-color: #e0e0e0;
+            margin-bottom: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .book-link {
+            text-decoration: none;
+            color: #333;
+            font-size: 13px;
+            font-weight: 500;
+            text-align: center;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            line-height: 1.4;
+        }
+
+        .book-link:hover {
+            color: #007bff;
+        }
+
+        .empty-message {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: #777;
+            padding: 40px;
+            font-size: 14px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+            grid-column: 1 / -1;
+            flex-wrap: wrap;
+        }
+
+        .pagination button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            min-width: 80px;
+            touch-action: manipulation;
+        }
+
+        .pagination button:active {
+            transform: scale(0.95);
+            background: #0056b3;
+        }
+
+        .pagination button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            font-size: 13px;
+            color: #555;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        @media screen and (max-width: 768px) {
+            .book-list {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
+            }
+
+            .book-item {
+                padding: 6px;
+            }
+
+            .book-cover {
+                margin-bottom: 6px;
+            }
+
+            .book-link {
+                font-size: 12px;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            #book-container {
+                padding: 10px;
+            }
+
+            .book-list {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+
+            .pagination {
+                gap: 8px;
+            }
+
+            .pagination button {
+                padding: 8px 16px;
+                font-size: 13px;
+                min-width: 70px;
+            }
+
+            .page-info {
+                font-size: 12px;
+                min-width: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="warning-banner">
+        <span id="warning-text"></span>
+        <button onclick="initBooks()">立即初始化</button>
+    </div>
+
+    <div id="header" style="height: 55px;"></div>
+
+    <script>
+        function getCurrentUser() {
+            const userStr = localStorage.getItem('currentUser');
+            return userStr ? JSON.parse(userStr) : null;
+        }
+
+        function renderHeader() {
+            const user = getCurrentUser();
+            const headerUser = document.getElementById('header-user');
+            const btnInit = document.getElementById('btn-init');
+            const btnAdmin = document.getElementById('btn-admin');
+
+            if (btnInit) {
+                btnInit.style.display = (user && user.is_admin === 1) ? '' : 'none';
+            }
+            if (btnAdmin) {
+                btnAdmin.style.display = (user && user.is_admin === 1) ? '' : 'none';
+            }
+
+            if (user) {
+                headerUser.innerHTML = `
+                    <span class="welcome-msg">欢迎 <a href="/history.html" style="color: #007bff; font-weight: 500; text-decoration: none;">${user.username}</a></span>
+                    <button class="header-btn btn-logout" id="btn-logout">退出</button>
+                `;
+                document.getElementById('btn-logout').addEventListener('click', logout);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('currentUser');
+            alert('已退出登录');
+            renderHeader();
+            location.reload();
+        }
+
+        async function initBooks() {
+            try {
+                const response = await fetch('/api/admin/books/init-only-new', { method: 'POST' });
+                const result = await response.json();
+                alert(result.message);
+                document.getElementById('warning-banner').style.display = 'none';
+                fetchBooks(1);
+            } catch (err) {
+                alert('初始化失败');
+            }
+        }
+
+        fetch('header.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('header').innerHTML = data;
+                renderHeader();
+                document.getElementById('btn-init').addEventListener('click', initBooks);
+            });
+    </script>
+
+    <div id="book-container">
+        <ul class="book-list" id="book-list">
+            <li class="empty-message">正在加载书架...</li>
+        </ul>
+        <div class="pagination" id="pagination-controls" style="display: none;">
+            <button id="btn-prev" onclick="prevPage()">上一页</button>
+            <span class="page-info" id="page-info"></span>
+            <button id="btn-next" onclick="nextPage()">下一页</button>
+        </div>
+    </div>
+
+    <script>
+        let allBooks = [];
+        let currentPage = 1;
+        let totalPages = 1;
+
+        async function checkDataSync() {
+            try {
+                const [booksResponse, dbResponse] = await Promise.all([
+                    fetch('/api/books'),
+                    fetch('/api/db/books?page=1&pageSize=1')
+                ]);
+
+                const epubFiles = await booksResponse.json();
+                const dbResult = await dbResponse.json();
+
+                const epubCount = epubFiles.length;
+                const dbCount = dbResult.pagination ? dbResult.pagination.total : 0;
+
+                if (epubCount !== dbCount) {
+                    const user = getCurrentUser();
+                    if (user && user.is_admin === 1) {
+                        const warningBanner = document.getElementById('warning-banner');
+                        const warningText = document.getElementById('warning-text');
+                        warningText.innerHTML = `数据不一致：books 目录有 <strong>${epubCount}</strong> 本书，数据库有 <strong>${dbCount}</strong> 本书。请点击"立即初始化"同步数据。`;
+                        warningBanner.style.display = 'block';
+                    }
+                }
+            } catch (err) {
+                console.error('检查数据同步失败:', err);
+            }
+        }
+
+        async function fetchBooks(page = 1) {
+            try {
+                const response = await fetch(`/api/db/books?page=${page}`);
+                const result = await response.json();
+
+                if (!result.data || result.data.length === 0) {
+                    const listElement = document.getElementById('book-list');
+                    listElement.innerHTML = '<li class="empty-message">书架空空如也，请先点击"初始化书籍"按钮！</li>';
+                    return;
+                }
+
+                allBooks = result.data;
+                currentPage = result.pagination.page;
+                totalPages = result.pagination.totalPages;
+                window.paginationData = result.pagination;
+
+                renderPage();
+
+            } catch (err) {
+                console.error("加载书架列表失败:", err);
+                document.getElementById('book-list').innerHTML = '<li class="empty-message">加载失败，请检查服务器是否正常运行。</li>';
+            }
+        }
+
+        function renderPage() {
+            const listElement = document.getElementById('book-list');
+            listElement.innerHTML = '';
+
+            allBooks.forEach(book => {
+                const li = document.createElement('li');
+                li.className = 'book-item';
+
+                const a = document.createElement('a');
+                a.className = 'book-link';
+                a.href = `/reader.html?book=${encodeURIComponent(book.file_path)}`;
+
+                const img = document.createElement('img');
+                img.className = 'book-cover';
+
+                if (book.cover_path) {
+                    img.src = book.cover_path;
+                    img.alt = book.title;
+                } else {
+                    img.src = '/js/placeholder.png';
+                    img.alt = '无封面';
+                }
+
+                const titleText = document.createElement('div');
+                titleText.className = 'book-link';
+                titleText.title = book.title;
+                titleText.innerText = book.title;
+
+                a.appendChild(img);
+                a.appendChild(titleText);
+                li.appendChild(a);
+                listElement.appendChild(li);
+            });
+
+            updatePaginationControls();
+        }
+
+        function updatePaginationControls() {
+            const paginationContainer = document.getElementById('pagination-controls');
+            const pageInfo = document.getElementById('page-info');
+            const btnPrev = document.getElementById('btn-prev');
+            const btnNext = document.getElementById('btn-next');
+
+            const pagination = window.paginationData || {};
+            const total = pagination.total || 0;
+
+            if (totalPages >= 1) {
+                paginationContainer.style.display = 'flex';
+                pageInfo.innerText = `${currentPage} / ${totalPages}，共 ${total} 本`;
+
+                btnPrev.disabled = currentPage <= 1;
+                btnNext.disabled = currentPage >= totalPages;
+            } else {
+                paginationContainer.style.display = 'none';
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                fetchBooks(currentPage - 1);
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                fetchBooks(currentPage + 1);
+            }
+        }
+
+        window.onload = async () => {
+            await checkDataSync();
+            fetchBooks(1);
+        };
+    </script>
+</body>
+</html>

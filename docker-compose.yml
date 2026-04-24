@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  epub-reader:
+    build: .
+    container_name: epub-reader
+    ports:
+      - "3000:3000"
+    volumes:
+      - /home/docker/data/epub-reader/books:/app/books
+      - /home/docker/data/epub-reader/data:/app/data
+      - /home/docker/data/epub-reader/htmls:/app/public/generated
+    restart: unless-stopped

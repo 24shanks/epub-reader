@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>书籍管理</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: #f5f5f5;
+            min-height: 100vh;
+        }
+        #header { max-width: 900px; margin: 0 auto; padding: 15px; }
+        #content {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 15px 15px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 15px;
+            color: #007bff;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .back-link:hover { text-decoration: underline; }
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 500;
+            color: #333;
+        }
+        tr:hover { background: #f8f9fa; }
+        .book-cover {
+            width: 40px;
+            height: 53px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        .book-title {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .pagination button {
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .pagination button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .page-info { font-size: 14px; color: #666; }
+        .btn-action {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-init {
+            background: #17a2b8;
+            color: white;
+        }
+        .btn-action-group {
+            display: flex;
+            gap: 5px;
+        }
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .btn-upload {
+            background: #28a745;
+            color: white;
+        }
+        #upload-input {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="header"></div>
+    <div id="content">
+        <a href="/admin/index.html" class="back-link">← 返回管理后台</a>
+        <div class="table-container">
+            <div class="toolbar">
+                <button class="btn-action btn-init" onclick="initOnlyNew()">差量初始化</button>
+                <button class="btn-action btn-init" onclick="initAll()">全量初始化</button>
+                <button class="btn-action btn-upload" onclick="document.getElementById('upload-input').click()">上传书籍</button>
+                <input type="file" id="upload-input" accept=".epub" onchange="uploadBook(this)">
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>封面</th>
+                        <th>书名</th>
+                        <th>章节数</th>
+                        <th>点击次数</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="book-table-body">
+                    <tr><td colspan="6" style="text-align:center;">加载中...</td></tr>
+                </tbody>
+            </table>
+            <div class="pagination" id="pagination-controls" style="display:none;">
+                <button id="btn-prev" onclick="prevPage()">上一页</button>
+                <span class="page-info" id="page-info"></span>
+                <button id="btn-next" onclick="nextPage()">下一页</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/header.js"></script>
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+        let pageSize = 10;
+
+        async function fetchBooks(page = 1) {
+            try {
+                const response = await fetch(`/api/db/books?page=${page}&pageSize=${pageSize}`);
+                const result = await response.json();
+                if (result.data) {
+                    renderTable(result.data);
+                    currentPage = result.pagination.page;
+                    totalPages = result.pagination.totalPages;
+                    updatePaginationControls();
+                }
+            } catch (err) {
+                console.error('获取书籍列表失败:', err);
+            }
+        }
+
+        function renderTable(books) {
+            const tbody = document.getElementById('book-table-body');
+            if (books.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">暂无数据</td></tr>';
+                return;
+            }
+            tbody.innerHTML = books.map(book => `
+                <tr>
+                    <td><img class="book-cover" src="${book.cover_path || '/js/placeholder.png'}" alt="${book.title}"></td>
+                    <td class="book-title" title="${book.title}">${book.title}</td>
+                    <td>${book.total_chapters}</td>
+                    <td>${book.click_count || 0}</td>
+                    <td>${book.created_at ? new Date(book.created_at).toLocaleString('zh-CN') : '-'}</td>
+                    <td>
+                        <div class="btn-action-group">
+                            <button class="btn-action btn-init" onclick="initBook(${book.id})">初始化</button>
+                            <button class="btn-action btn-delete" onclick="deleteBook(${book.id}, '${book.file_path.replace(/'/g, "\\'")}')">删除</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updatePaginationControls() {
+            const container = document.getElementById('pagination-controls');
+            const pageInfo = document.getElementById('page-info');
+            const btnPrev = document.getElementById('btn-prev');
+            const btnNext = document.getElementById('btn-next');
+            container.style.display = totalPages > 1 ? 'flex' : 'none';
+            pageInfo.innerText = `第 ${currentPage} / ${totalPages} 页`;
+            btnPrev.disabled = currentPage <= 1;
+            btnNext.disabled = currentPage >= totalPages;
+        }
+
+        function prevPage() {
+            if (currentPage > 1) fetchBooks(currentPage - 1);
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) fetchBooks(currentPage + 1);
+        }
+
+        async function deleteBook(bookId, filePath) {
+            if (!confirm('确定要删除这本书吗？\n这将同时删除数据库记录和生成的HTML文件。')) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/admin/books/${bookId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_path: filePath })
+                });
+                const result = await response.json();
+                alert(result.message || result.error);
+                fetchBooks(currentPage);
+            } catch (err) {
+                alert('删除失败');
+            }
+        }
+
+        async function initBook(bookId) {
+            if (!confirm('确定要初始化这本书吗？\n这将重新生成章节HTML和封面。')) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/admin/books/${bookId}/init`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                alert(result.message || result.error);
+                fetchBooks(currentPage);
+            } catch (err) {
+                alert('初始化失败');
+            }
+        }
+
+async function initOnlyNew() {
+            if (!confirm('确定要进行差量初始化吗？\n只初始化数据库中没有的书籍。')) {
+                return;
+            }
+            try {
+                const response = await fetch('/api/admin/books/init-only-new', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                alert(result.message + '\n新增: ' + result.added + ' 本, 跳过: ' + result.skipped + ' 本');
+                fetchBooks(currentPage);
+            } catch (err) {
+                alert('差量初始化失败');
+            }
+        }
+
+        async function initAll() {
+            if (!confirm('确定要进行全量初始化吗？\n这将处理所有书籍，包括更新已存在的。')) {
+                return;
+            }
+            try {
+                const response = await fetch('/api/admin/books/init-all', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                alert(result.message + '\n新增: ' + result.added + ' 本, 更新: ' + result.updated + ' 本');
+                fetchBooks(currentPage);
+            } catch (err) {
+                alert('全量初始化失败');
+            }
+        }
+
+        async function uploadBook(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            if (!file.name.toLowerCase().endsWith('.epub')) {
+                alert('只支持上传epub格式文件');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/admin/books/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                alert(result.message || result.error);
+                if (response.ok) {
+                    fetchBooks(currentPage);
+                }
+            } catch (err) {
+                alert('上传失败');
+            }
+            input.value = '';
+        }
+
+        window.onload = async () => {
+            const user = getCurrentUser();
+            if (!user || user.is_admin !== 1) {
+                alert('无权限访问');
+                location.href = '/index.html';
+                return;
+            }
+            await initHeader();
+            fetchBooks(1);
+        };
+    </script>
+</body>
+</html>

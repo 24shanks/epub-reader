@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阅读器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .nav-link {
+            display: inline-block;
+            padding: 10px 15px;
+            text-decoration: none;
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .nav-link:hover {
+            text-decoration: underline;
+        }
+
+        #viewer-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 10px 10px;
+        }
+
+        #book-info {
+            padding: 10px 10px;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+        }
+
+        #chapter-info {
+            padding: 13px 10px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+
+        #chapter-content {
+            flex: 1;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #chapter-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 0;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .center-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .chapter-nav {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        #theme-toggle {
+            background: #6c757d;
+        }
+
+        #theme-toggle:hover {
+            background: #5a6268;
+        }
+
+        #chapter-select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-width: 150px;
+        }
+
+        .font-size-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .font-size-controls span {
+            font-size: 12px;
+            color: #666;
+        }
+
+        #font-size-input {
+            width: 60px;
+            padding: 6px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .chapter-container {
+            display: flex;
+            justify-content: center;  
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+        }
+
+        /* 夜间模式样式 */
+        body.dark-mode {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode #chapter-content {
+            background-color: #1e1e1e;
+            border-color: #444;
+        }
+
+        body.dark-mode #book-info,
+        body.dark-mode #chapter-info {
+            color: #ccc;
+        }
+
+        body.dark-mode .nav-link {
+            color: #4da3ff;
+        }
+
+        body.dark-mode button {
+            background: #444;
+            color: white;
+        }
+
+        body.dark-mode button:hover {
+            background: #555;
+        }
+
+        body.dark-mode button:disabled {
+            background: #333;
+        }
+
+        body.dark-mode #chapter-select {
+            background: #333;
+            color: white;
+            border-color: #555;
+        }
+
+        body.dark-mode .font-size-controls span {
+            color: #ccc;
+        }
+
+        body.dark-mode #font-size-input {
+            background: #333;
+            color: white;
+            border-color: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="viewer-container">
+        <div class="chapter-container">
+            <a href="/" class="nav-link">&larr; 返回书架</a>
+            <div id="book-info">正在加载...</div>
+            <div id="chapter-info"></div>
+        </div>
+
+        <div id="chapter-content">
+            <div class="loading">正在加载章节内容...</div>
+        </div>
+        <div class="controls">
+            <div class="chapter-nav">
+                <select id="chapter-select" onchange="goToChapter(this.value)">
+                    <option value="">请选择章节</option>
+                </select>
+            </div>
+            <div class="center-controls">
+                <button id="prev-btn" onclick="prevChapter()">上一章</button>
+                <button id="next-btn" onclick="nextChapter()">下一章</button>
+            </div>
+            <div class="font-size-controls">
+                <span>字体:</span>
+                <button onclick="changeFontSize(-2)">A-</button>
+                <input type="number" id="font-size-input" value="16" min="12" max="36"
+                    onchange="setFontSize(this.value)">
+                <button onclick="changeFontSize(2)">A+</button>
+            </div>
+            <button id="theme-toggle" onclick="toggleTheme()">🌙 夜间模式</button>
+        </div>
+    </div>
+
+    <script>
+        let isDarkMode = false;
+        let bookInfo = null;
+        let currentChapter = 1;
+        let totalChapters = 0;
+        let currentFontSize = 16;
+
+        function sanitizeFilename(filename) {
+            return filename.replace(/[<>:"/\\|?*]/g, '_').replace(/\s+/g, '_');
+        }
+
+        function getCurrentUser() {
+            const userStr = localStorage.getItem('currentUser');
+            return userStr ? JSON.parse(userStr) : null;
+        }
+
+        async function saveReadingHistory(bookId, currentPage) {
+            const user = getCurrentUser();
+            if (!user) return;
+
+            try {
+                await fetch('/api/reading-history', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: user.id,
+                        book_id: bookId,
+                        current_page: currentPage
+                    })
+                });
+            } catch (err) {
+                console.error('保存阅读历史失败:', err);
+            }
+        }
+
+        async function getReadingHistory(userId, bookId) {
+            try {
+                const response = await fetch(`/api/reading-history/${userId}/${bookId}`);
+                return await response.json();
+            } catch (err) {
+                console.error('获取阅读历史失败:', err);
+                return null;
+            }
+        }
+
+        async function initBookInDB(filename) {
+            try {
+                const response = await fetch(`/api/db/books/by-filename?filename=${encodeURIComponent(filename)}`);
+                const book = await response.json();
+                if (book && book.id) {
+                    fetch(`/api/db/books/${book.id}/click`, { method: 'PUT' });
+                }
+                return book;
+            } catch (err) {
+                console.error('获取书籍信息失败:', err);
+                return null;
+            }
+        }
+
+        async function updateProgress(filename, currentPage) {
+            try {
+                await fetch('/api/db/books/by-filename/progress', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename, current_page: currentPage })
+                });
+            } catch (err) {
+                console.error('更新进度失败:', err);
+            }
+        }
+
+        function loadChapter(chapterNum) {
+            if (!bookInfo || chapterNum < 1 || chapterNum > totalChapters) return;
+
+            currentChapter = chapterNum;
+            const bookDir = sanitizeFilename(bookInfo.file_path.replace('.epub', ''));
+            const chapterUrl = `/generated/${bookDir}/chapter_${chapterNum}.html`;
+
+            const contentDiv = document.getElementById('chapter-content');
+            contentDiv.innerHTML = `<iframe id="chapter-iframe" src="${chapterUrl}" onload="onChapterLoaded()"></iframe>`;
+
+            document.getElementById('chapter-info').innerText = `第 ${chapterNum} / ${totalChapters} 章`;
+            document.getElementById('chapter-select').value = chapterNum;
+
+            saveReadingHistory(bookInfo.id, chapterNum);
+
+            updatePrevNextButtons();
+            updateProgress(bookInfo.file_path, chapterNum);
+        }
+
+        function onChapterLoaded() {
+            try {
+                const iframe = document.getElementById('chapter-iframe');
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+                if (isDarkMode) {
+                    iframeDoc.body.style.backgroundColor = '#1e1e1e';
+                    iframeDoc.body.style.color = '#e0e0e0';
+                }
+                iframeDoc.body.style.fontSize = currentFontSize + 'px';
+            } catch (e) {
+            }
+        }
+
+        function updatePrevNextButtons() {
+            document.getElementById('prev-btn').disabled = currentChapter <= 1;
+            document.getElementById('next-btn').disabled = currentChapter >= totalChapters;
+        }
+
+        function prevChapter() {
+            if (currentChapter > 1) {
+                loadChapter(currentChapter - 1);
+            }
+        }
+
+        function nextChapter() {
+            if (currentChapter < totalChapters) {
+                loadChapter(currentChapter + 1);
+            }
+        }
+
+        function goToChapter(chapterNum) {
+            if (chapterNum) {
+                loadChapter(parseInt(chapterNum));
+            }
+        }
+
+        window.toggleTheme = function () {
+            isDarkMode = !isDarkMode;
+            if (isDarkMode) {
+                document.body.classList.add('dark-mode');
+                document.getElementById('theme-toggle').innerText = '☀️ 日间模式';
+            } else {
+                document.body.classList.remove('dark-mode');
+                document.getElementById('theme-toggle').innerText = '🌙 夜间模式';
+            }
+
+            applyIframeStyles();
+        }
+
+        function setFontSize(size) {
+            currentFontSize = Math.max(12, Math.min(36, parseInt(size) || 16));
+            document.getElementById('font-size-input').value = currentFontSize;
+            localStorage.setItem('readerFontSize', currentFontSize);
+            applyIframeStyles();
+        }
+
+        function changeFontSize(delta) {
+            setFontSize(currentFontSize + delta);
+        }
+
+        function applyIframeStyles() {
+            try {
+                const iframe = document.getElementById('chapter-iframe');
+                if (iframe && iframe.contentDocument && iframe.contentDocument.body) {
+                    const iframeDoc = iframe.contentDocument;
+                    iframeDoc.body.style.backgroundColor = isDarkMode ? '#1e1e1e' : '#ffffff';
+                    iframeDoc.body.style.color = isDarkMode ? '#e0e0e0' : '#333333';
+                    iframeDoc.body.style.fontSize = currentFontSize + 'px';
+                }
+            } catch (e) {
+            }
+        }
+
+        document.addEventListener('keyup', function (e) {
+            if (e.key === 'ArrowLeft') prevChapter();
+            if (e.key === 'ArrowRight') nextChapter();
+        });
+
+        async function init() {
+            const savedFontSize = localStorage.getItem('readerFontSize');
+            if (savedFontSize) {
+                currentFontSize = parseInt(savedFontSize) || 16;
+                document.getElementById('font-size-input').value = currentFontSize;
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const bookFileName = urlParams.get('book');
+
+            if (!bookFileName) {
+                document.getElementById('book-info').innerText = '未指定阅读的书籍，请返回书架选择！';
+                return;
+            }
+
+            bookInfo = await initBookInDB(bookFileName);
+            if (!bookInfo) {
+                document.getElementById('book-info').innerText = '获取书籍信息失败';
+                return;
+            }
+
+            document.getElementById('book-info').innerText = bookInfo.title;
+            document.title = `${bookInfo.title} - 阅读器`;
+
+            totalChapters = bookInfo.total_chapters || 0;
+
+            const chapterSelect = document.getElementById('chapter-select');
+            chapterSelect.innerHTML = '<option value="">请选择章节</option>';
+            for (let i = 1; i <= totalChapters; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `第 ${i} 章`;
+                chapterSelect.appendChild(option);
+            }
+
+            let startChapter = bookInfo.current_page || 1;
+            const user = getCurrentUser();
+            if (user) {
+                const history = await getReadingHistory(user.id, bookInfo.id);
+                if (history && history.current_page) {
+                    startChapter = history.current_page;
+                }
+            }
+
+            loadChapter(startChapter);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+
+</html>

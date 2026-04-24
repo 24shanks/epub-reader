@@ -1,0 +1,87 @@
+<style>
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+.header-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    text-decoration: none;
+}
+.header-title:hover {
+    color: #007bff;
+}
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.welcome-msg {
+    font-size: 14px;
+    color: #666;
+}
+.welcome-msg span {
+    color: #007bff;
+    font-weight: 500;
+}
+.header-btn {
+    padding: 4px 10px;
+    border: none;
+    border-radius: 4px;
+    font-size: 9px;
+    cursor: pointer;
+    text-decoration: none;
+}
+.btn-login {
+    background: #007bff;
+    color: white;
+}
+.btn-login:hover {
+    background: #0056b3;
+}
+.btn-register {
+    background: #28a745;
+    color: white;
+}
+.btn-register:hover {
+    background: #1e7e34;
+}
+.btn-logout {
+    background: #6c757d;
+    color: white;
+}
+.btn-logout:hover {
+    background: #5a6268;
+}
+.btn-init {
+    background: #ffc107;
+    color: #333;
+}
+.btn-init:hover {
+    background: #e0a800;
+}
+</style>
+
+<div class="header">
+    <div class="header-left">
+        <a href="/index.html" class="header-title">📚 书架</a>
+        <button class="header-btn btn-init" id="btn-init">初始化书籍</button>
+        <a href="/admin/index.html" class="header-btn" id="btn-admin" style="display:none; background:#17a2b8; color:white;">管理后台</a>
+    </div>
+    <div class="header-right" id="header-user">
+        <a href="/login.html" class="header-btn btn-login">登录</a>
+        <a href="/register.html" class="header-btn btn-register">注册</a>
+    </div>
+</div>
