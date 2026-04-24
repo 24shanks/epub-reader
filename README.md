@@ -2,7 +2,8 @@
 
 这是一个基于 `Node.js + Express` 开发的轻量级网页版 EPUB 电子书阅读器，支持用户注册登录、管理员后台和书籍管理。
 
-![Uploading list.png…]()
+
+<img width="1791" height="908" alt="list" src="https://github.com/user-attachments/assets/40d37153-5234-407f-bf18-9cf073e84641" />
 
 ---
 
