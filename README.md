@@ -2,6 +2,7 @@
 
 这是一个基于 `Node.js + Express` 开发的轻量级网页版 EPUB 电子书阅读器，支持用户注册登录、管理员后台和书籍管理。
 
+![Uploading list.png…]()
 
 ---
 
@@ -21,6 +22,7 @@
 
 ---
 预览地址： https://book.9977521.xyz/index.html
+
 
 ## 🛠️ 项目架构与原理
 
