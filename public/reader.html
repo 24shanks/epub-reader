@@ -216,7 +216,7 @@
 <body>
     <div id="viewer-container">
         <div class="chapter-container">
-            <a href="/" class="nav-link">&larr; 返回书架</a>
+            <a href="/" class="nav-link" onclick="handleBack(event)">&larr; 返回书架</a>
             <div id="book-info">正在加载...</div>
             <div id="chapter-info"></div>
         </div>
@@ -251,6 +251,16 @@
         let currentChapter = 1;
         let totalChapters = 0;
         let currentFontSize = 16;
+
+        function handleBack(event) {
+            event.preventDefault();
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+            if (isMobile) {
+                window.location.href = '/index_h5.html';
+            } else {
+                window.location.href = '/';
+            }
+        }
 
         function sanitizeFilename(filename) {
             return filename.replace(/[<>:"/\\|?*]/g, '_').replace(/\s+/g, '_');
@@ -381,7 +391,8 @@
                 document.body.classList.remove('dark-mode');
                 document.getElementById('theme-toggle').innerText = '🌙 夜间模式';
             }
-
+            
+            localStorage.setItem('readerDarkMode', isDarkMode);
             applyIframeStyles();
         }
 
@@ -419,6 +430,13 @@
             if (savedFontSize) {
                 currentFontSize = parseInt(savedFontSize) || 16;
                 document.getElementById('font-size-input').value = currentFontSize;
+            }
+
+            const savedDarkMode = localStorage.getItem('readerDarkMode');
+            if (savedDarkMode === 'true') {
+                isDarkMode = true;
+                document.body.classList.add('dark-mode');
+                document.getElementById('theme-toggle').innerText = '☀️ 日间模式';
             }
 
             const urlParams = new URLSearchParams(window.location.search);

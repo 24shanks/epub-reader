@@ -72,6 +72,58 @@
 .btn-init:hover {
     background: #e0a800;
 }
+
+/* 移动端 H5 适配样式 */
+@media screen and (max-width: 768px) {
+    .header {
+        padding: 10px 12px;
+        border-radius: 0;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .header-left {
+        gap: 10px;
+        width: 100%;
+        justify-content: space-between;
+    }
+    .header-title {
+        font-size: 16px;
+    }
+    .header-btn {
+        padding: 5px 12px;
+        font-size: 12px;
+    }
+    .header-right {
+        width: 100%;
+        justify-content: flex-end;
+        gap: 10px;
+        border-top: 1px solid #eee;
+        padding-top: 8px;
+    }
+    .welcome-msg {
+        font-size: 13px;
+        flex: 1;
+        text-align: right;
+    }
+}
+
+/* 夜间模式适配 */
+body.dark-mode .header {
+    background: #1e1e1e;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+body.dark-mode .header-title {
+    color: #e0e0e0;
+}
+body.dark-mode .welcome-msg, body.dark-mode .welcome-msg a {
+    color: #e0e0e0 !important;
+}
+@media screen and (max-width: 768px) {
+    body.dark-mode .header-right {
+        border-top-color: #333;
+    }
+}
 </style>
 
 <div class="header">
@@ -79,6 +131,7 @@
         <a href="/index.html" class="header-title">📚 书架</a>
         <button class="header-btn btn-init" id="btn-init">初始化书籍</button>
         <a href="/admin/index.html" class="header-btn" id="btn-admin" style="display:none; background:#17a2b8; color:white;">管理后台</a>
+        <button class="header-btn" id="theme-toggle" onclick="toggleTheme()" style="background:transparent; font-size:16px; padding:2px; height:auto;" title="切换夜间模式">🌙</button>
     </div>
     <div class="header-right" id="header-user">
         <a href="/login.html" class="header-btn btn-login">登录</a>

@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <script>
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768) {
+            window.location.replace('/index_h5.html');
+        }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -197,9 +202,66 @@
                 min-width: 80px;
             }
         }
+
+        /* 首页夜间模式适配 */
+        body.dark-mode {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        body.dark-mode .book-item {
+            background-color: #1e1e1e;
+            border-color: #333;
+        }
+        body.dark-mode .book-link {
+            color: #e0e0e0;
+        }
+        body.dark-mode .book-link:hover {
+            color: #4da3ff;
+        }
+        body.dark-mode .book-cover {
+            border-color: #444;
+            background-color: #333;
+        }
+        body.dark-mode .empty-message, body.dark-mode .page-info {
+            color: #aaa;
+        }
+        body.dark-mode .pagination button:disabled {
+            background: #333;
+            color: #777;
+        }
+        body.dark-mode #warning-banner {
+            background: #332701;
+            border-color: #856404;
+            color: #ffc107;
+        }
     </style>
 </head>
 <body>
+    <script>
+        function applyDarkMode() {
+            const isDark = localStorage.getItem('readerDarkMode') === 'true';
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
+            const toggleBtn = document.getElementById('theme-toggle');
+            if (toggleBtn) {
+                toggleBtn.innerText = isDark ? '☀️' : '🌙';
+            }
+        }
+        
+        window.toggleTheme = function() {
+            const isDark = document.body.classList.toggle('dark-mode');
+            localStorage.setItem('readerDarkMode', isDark);
+            const toggleBtn = document.getElementById('theme-toggle');
+            if (toggleBtn) {
+                toggleBtn.innerText = isDark ? '☀️' : '🌙';
+            }
+        }
+
+        applyDarkMode();
+    </script>
     <div id="warning-banner">
         <span id="warning-text"></span>
         <button onclick="initBooks()">立即初始化</button>
@@ -260,6 +322,7 @@
                 document.getElementById('header').innerHTML = data;
                 renderHeader();
                 document.getElementById('btn-init').addEventListener('click', initBooks);
+                applyDarkMode(); // re-apply to set icon correctly
             });
     </script>
 
