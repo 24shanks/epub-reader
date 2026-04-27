@@ -487,6 +487,24 @@ app.post('/api/admin/books/init-only-new', async (req, res) => {
             const title = generateBookTitle(file);
 
             const filePath = path.join(booksDir, file);
+
+            const existingByTitle = await new Promise((resolve) => {
+                db.get('SELECT id, file_path FROM books WHERE title = ?', [title], (err, row) => {
+                    resolve(row);
+                });
+            });
+
+            if (existingByTitle && existingByTitle.file_path !== file) {
+                console.log('[ADMIN]', new Date().toISOString(), '- 库中已存在相同书名，删除新增文件:', file);
+                try {
+                    fs.unlinkSync(filePath);
+                } catch (e) {
+                    console.error('[ADMIN]', new Date().toISOString(), '- 删除重复书籍文件失败:', e.message);
+                }
+                skipped++;
+                continue;
+            }
+
             const epubData = parseEpubForChapters(filePath);
             const totalChapters = epubData ? epubData.chapters.length : 0;
 
@@ -571,6 +589,23 @@ app.post('/api/admin/books/init-all', async (req, res) => {
             const title = generateBookTitle(file);
 
             const filePath = path.join(booksDir, file);
+
+            const existingByTitle = await new Promise((resolve) => {
+                db.get('SELECT id, file_path FROM books WHERE title = ?', [title], (err, row) => {
+                    resolve(row);
+                });
+            });
+
+            if (existingByTitle && existingByTitle.file_path !== file) {
+                console.log('[ADMIN]', new Date().toISOString(), '- 库中已存在相同书名，删除新增文件:', file);
+                try {
+                    fs.unlinkSync(filePath);
+                } catch (e) {
+                    console.error('[ADMIN]', new Date().toISOString(), '- 删除重复书籍文件失败:', e.message);
+                }
+                continue;
+            }
+
             const epubData = parseEpubForChapters(filePath);
             const totalChapters = epubData ? epubData.chapters.length : 0;
 
@@ -660,6 +695,23 @@ app.post('/api/db/books/init', async (req, res) => {
             const title = generateBookTitle(file);
 
             const filePath = path.join(booksDir, file);
+            
+            const existingByTitle = await new Promise((resolve) => {
+                db.get('SELECT id, file_path FROM books WHERE title = ?', [title], (err, row) => {
+                    resolve(row);
+                });
+            });
+
+            if (existingByTitle && existingByTitle.file_path !== file) {
+                console.log('[BOOKS]', new Date().toISOString(), '- 库中已存在相同书名，删除新增文件:', file);
+                try {
+                    fs.unlinkSync(filePath);
+                } catch (e) {
+                    console.error('[BOOKS]', new Date().toISOString(), '- 删除重复书籍文件失败:', e.message);
+                }
+                continue;
+            }
+
             const epubData = parseEpubForChapters(filePath);
             const totalChapters = epubData ? epubData.chapters.length : 0;
 
